@@ -1,0 +1,71 @@
+[package]
+name = "bettergrep"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+description = "Instant file search, drive-wide grep and file history for Windows: one small exe with an MCP server for AI assistants."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/affifuddin-hazam/bettergrep"
+homepage = "https://github.com/affifuddin-hazam/bettergrep"
+keywords = ["grep", "file-search", "windows", "ntfs", "mcp"]
+categories = ["command-line-utilities", "filesystem"]
+
+[lib]
+name = "bettergrep"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bettergrep"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+chrono = "0.4.45"
+clap = { version = "4.6.7", features = ["derive"] }
+crossbeam-channel = "0.5.17"
+ctrlc = "3.5.2"
+globset = "0.4.20"
+grep-matcher = "0.1.9"
+grep-regex = "0.1.14"
+grep-searcher = "0.1.17"
+hex = "0.4.3"
+ignore = "0.4.33"
+memchr = "2.8.3"
+memmap2 = "0.9.11"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+sha2 = "0.11.1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_IO",
+    "Win32_System_Registry",
+    "Win32_System_SystemServices",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[dev-dependencies]
+crossbeam-channel = "0.5.17"
+rusqlite = "0.40.2"
+serde_json = "1.0.154"
+tempfile = "3.27.0"
+windows-sys = { version = "0.61.2", features = ["Win32_UI_Shell", "Win32_Foundation"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[build-dependencies]
+embed-manifest = "1.5.1"
+
+[workspace]
+members = ["."]
