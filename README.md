@@ -71,14 +71,17 @@ Every command accepts `--json`. Data lives in `%LOCALAPPDATA%\bettergrep`; use `
 
 ## Benchmarks
 
-Searching the Cargo registry source cache: 599 crates, 29,752 files, 912 MB. Warm file cache, median of 5 runs, every matching line printed. Both tools printed the same number of lines in every case.
+Searching the Cargo registry source cache: 599 crates, 29,752 files, 912 MB. Warm file cache, every matching line printed, median of 5 runs (3 for `findstr`, 1 for `Select-String`).
 
-| Search | ripgrep 15.1.0 | bettergrep 0.1.0 |
-|---|---:|---:|
-| literal `unsafe impl Send` (7,345 lines) | 1,403 ms | **651 ms** |
-| regex `fn \w+_unchecked\(` (414 lines) | 1,387 ms | **607 ms** |
-| `-i -l deprecated` (2,412 files) | 1,421 ms | **622 ms** |
-| no match | 1,567 ms | **636 ms** |
+| Tool | literal `unsafe impl Send` | regex `fn \w+_unchecked\(` | `-i -l deprecated` | no match |
+|---|---:|---:|---:|---:|
+| **bettergrep 0.1.0** | **651 ms** | **607 ms** | **622 ms** | **636 ms** |
+| ripgrep 15.1.0 | 1,403 ms | 1,387 ms | 1,421 ms | 1,567 ms |
+| `findstr /s` | 4,588 ms | | | |
+| GNU grep 3.0 (`grep -rnI`, from Git for Windows) | 6,981 ms | 6,804 ms | 6,695 ms | 6,769 ms |
+| PowerShell `Select-String` | 21,696 ms | | | |
+
+All tools found the same 7,345 lines for the literal search, and bettergrep and ripgrep agreed in every column (414 lines, 2,412 files). GNU grep listed 2,414 files for `-i -l` because it also searches hidden `.github` folders, which ripgrep and bettergrep skip unless given `--hidden`. The two built-in Windows tools were measured on the literal search only.
 
 By default bettergrep skips files with binary extensions (`.dll`, `.lib`, `.a`, images, archives) without opening them; ripgrep opens them to check. That is not where the difference comes from: with `--binary`, bettergrep opens all 29,752 files and the literal search takes 687 ms.
 
