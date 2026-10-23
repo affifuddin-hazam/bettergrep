@@ -7,7 +7,8 @@ pub const INDEX_FILENAME: &str = ".bettergrep.json";
 /// Suffix of the temporary file written before the index is atomically replaced.
 pub const INDEX_TMP_SUFFIX: &str = ".bettergrep-tmp";
 
-/// Absolute, normalised path that keeps its original case (`C:\Users\Me\file.txt`).
+/// Absolute, normalised path that keeps its original case (`C:\Users\Me\file.txt`),
+/// with 8.3 short names expanded.
 pub fn norm(path: impl AsRef<Path>) -> String {
     let path = path.as_ref();
     let abs = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
@@ -15,7 +16,7 @@ pub fn norm(path: impl AsRef<Path>) -> String {
     while s.len() > 3 && s.ends_with('\\') {
         s.pop();
     }
-    s
+    expand_short(s)
 }
 
 /// `\\?\C:\x` -> `C:\x`, `\\?\UNC\srv\share` -> `\\srv\share`.
@@ -26,6 +27,28 @@ pub fn strip_verbatim(s: &str) -> String {
         rest.to_string()
     } else {
         s.to_string()
+    }
+}
+
+/// Whether `path` may contain an 8.3 short name such as `PROGRA~1`: a `~`
+/// followed by a digit.  (`~$report.docx` and similar names do not count.)
+fn may_be_short(path: &str) -> bool {
+    path.as_bytes().windows(2).any(|w| w[0] == b'~' && w[1].is_ascii_digit())
+}
+
+/// Expand 8.3 short names, so a folder given as `C:\Users\RUNNER~1\x` and the
+/// long paths Windows reports for it (`C:\Users\runneradmin\x`) compare equal.
+/// A path that no longer exists is expanded as far as its existing parent.
+fn expand_short(path: String) -> String {
+    if !may_be_short(&path) {
+        return path;
+    }
+    if let Some(long) = crate::win::long_path(&path) {
+        return long;
+    }
+    match path.rsplit_once('\\') {
+        Some((dir, name)) if dir.len() >= 2 => format!("{}\\{name}", expand_short(dir.to_string())),
+        _ => path,
     }
 }
 
@@ -210,6 +233,16 @@ impl IgnoreRules {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn short_names_are_expanded() {
+        assert!(may_be_short(r"C:\PROGRA~1\x") && !may_be_short(r"C:\docs\~$report.docx") && !may_be_short("a~b"));
+        // Only checkable where the system drive has 8.3 names (most do; CI does).
+        let Some(long) = crate::win::long_path(r"C:\PROGRA~1") else { return };
+        assert_eq!(norm(r"C:\PROGRA~1"), long);
+        assert_eq!(norm(r"C:\PROGRA~1\no-such-folder\file.txt"), format!(r"{long}\no-such-folder\file.txt"));
+        assert_eq!(norm(r"C:\docs\~$report.docx"), r"C:\docs\~$report.docx");
+    }
 
     #[test]
     fn wildcard_matching() {

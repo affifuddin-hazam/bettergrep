@@ -22,6 +22,7 @@ First public release.
 - `bettergrep drives add C:` indexes the drive straight away when run as administrator, and says what to do when it is not.
 - `bettergrep grep`: search inside files using ripgrep's libraries. Folders are walked in parallel and respect `.gitignore`; drive roots in full-drive mode are listed from the index instead of walked. Files with binary extensions are skipped without being opened. Globs (`-g`) are case-insensitive, like Windows file names.
 - `bettergrep PATTERN [PATHS]` is short for `bettergrep grep PATTERN [PATHS]`.
+- Paths given with 8.3 short names (`C:\PROGRA~1`, `C:\Users\RUNNER~1`) are expanded, so they match the long paths Windows reports for the same files.
 - `bettergrep grep` shows progress on stderr during long searches ("searching... 12,000 files, 3 matches, 40 s"), so a search reading a cold disk does not look hung. On a console it is one line updated in place; when stderr is captured it is a plain line every ten seconds. Not shown with `--json`.
 - `bettergrep find --limit 0` means no limit, as it does for `bettergrep grep`.
 - Activity feed: repeated creations, deletions and edits of one file within a minute fold into a single entry with a count ("Rewritten 114x"), so a program that rewrites a settings file several times a second cannot flood the feed or push real events out of it. Folders can be muted from the feed (`activity_mute` in `config.json`); their changes are still recorded and searchable.

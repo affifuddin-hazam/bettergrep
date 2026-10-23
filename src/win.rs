@@ -8,8 +8,8 @@ use windows_sys::Win32::Storage::FileSystem::{
     BY_HANDLE_FILE_INFORMATION, CreateFileW, FILE_ATTRIBUTE_HIDDEN, FILE_FLAG_BACKUP_SEMANTICS,
     FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_DESCRIPTOR, FILE_ID_DESCRIPTOR_0, FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE,
     FILE_SHARE_READ, FILE_SHARE_WRITE, FileIdType, GetFileAttributesW, GetFileInformationByHandle,
-    GetFinalPathNameByHandleW, GetVolumePathNameW, INVALID_FILE_ATTRIBUTES, OPEN_EXISTING, OpenFileById,
-    SetFileAttributesW,
+    GetFinalPathNameByHandleW, GetLongPathNameW, GetVolumePathNameW, INVALID_FILE_ATTRIBUTES, OPEN_EXISTING,
+    OpenFileById, SetFileAttributesW,
 };
 
 use crate::paths::strip_verbatim;
@@ -96,6 +96,24 @@ pub fn final_path(h: &OwnedHandle) -> Option<String> {
     let mut buf = vec![0u16; 1024];
     loop {
         let n = unsafe { GetFinalPathNameByHandleW(h.0, buf.as_mut_ptr(), buf.len() as u32, 0) } as usize;
+        if n == 0 {
+            return None;
+        }
+        if n < buf.len() {
+            return Some(strip_verbatim(&String::from_utf16_lossy(&buf[..n])));
+        }
+        buf.resize(n + 1, 0);
+    }
+}
+
+/// `path` with any 8.3 short names (`C:\PROGRA~1`) expanded to their long
+/// form, or `None` if the path does not exist.
+pub fn long_path(path: &str) -> Option<String> {
+    let path = wide(path);
+    let mut buf = vec![0u16; 512];
+    loop {
+        // SAFETY: `path` is NUL-terminated and `buf` is writable for `buf.len()` u16s.
+        let n = unsafe { GetLongPathNameW(path.as_ptr(), buf.as_mut_ptr(), buf.len() as u32) } as usize;
         if n == 0 {
             return None;
         }
