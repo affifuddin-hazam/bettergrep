@@ -279,6 +279,12 @@ pub fn grep_with_progress(
         }
         let _ = producer.join();
     });
+    // The loop can end before reporting the last files searched; report the totals.
+    on_progress(&GrepProgress {
+        files_searched: searched.load(Ordering::Relaxed),
+        matches: matches.len(),
+        elapsed: started.elapsed(),
+    });
     // Files can interleave between workers; count distinct ones.
     if !opts.files_only {
         let mut paths: Vec<&str> = matches.iter().map(|m| m.path.as_str()).collect();
